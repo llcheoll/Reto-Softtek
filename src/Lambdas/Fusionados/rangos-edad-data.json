@@ -1,0 +1,34 @@
+{
+  "rangosEdad": [
+    {
+      "id": "ajsdnkasd323",
+      "nombre_rango": "Bebé",
+      "edad_minima": 0,
+      "edad_maxima": 1
+    },
+    {
+      "id": "kamdasd",
+      "nombre_rango": "Niño/a",
+      "edad_minima": 2,
+      "edad_maxima": 12
+    },
+    {
+      "id": "lmas8du193en",
+      "nombre_rango": "Adolescente",
+      "edad_minima": 13,
+      "edad_maxima": 17
+    },
+    {
+      "id": "mkamskdm92",
+      "nombre_rango": "Adulto",
+      "edad_minima": 18,
+      "edad_maxima": 64
+    },
+    {
+      "id": "ñlaskdasd55238",
+      "nombre_rango": "Anciano",
+      "edad_minima": 65,
+      "edad_maxima": 999
+    }
+  ]
+} 

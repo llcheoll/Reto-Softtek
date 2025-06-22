@@ -1,0 +1,358 @@
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  JwtSecretApiGateway:
+    Type: String
+    Description: El secreto para firmar y verificar los JWT para el API Gateway.
+    NoEcho: true
+    Default: test-secret-123-retotecnico-xyz
+
+Resources:
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${ResourceName} From Stack ${AWS::StackName}
+        - ResourceName: Api
+      StageName: Prod
+      TracingEnabled: true
+      Auth:
+        Authorizers:
+          JwtAuthorizer:
+            FunctionArn: !GetAtt AuthorizerFunction.Arn
+            Identity:
+              Header: Authorization
+            ResultTtlInSeconds: 0
+      Cors:
+        AllowMethods: '''GET,POST,OPTIONS'''
+        AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+        AllowOrigin: '''*'''
+
+  ApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: DefaultUsagePlan
+      ApiStages:
+        - ApiId: !Ref Api
+          Stage: Prod
+      Throttle:
+        RateLimit: 10
+        BurstLimit: 20
+
+      Quota:
+        Limit: 10000
+        Period: MONTH
+
+  Almacenar:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: Almacenar
+      CodeUri: src/Lambdas/Almacenar
+      Handler: index.handler
+      Runtime: nodejs20.x
+      MemorySize: 512
+      Timeout: 30
+      Tracing: Active
+      Environment:
+        Variables:
+          PERSONAJES_TABLE_NAME: !Ref personajes
+          PERSONAJES_TABLE_ARN: !GetAtt personajes.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /almacenar
+            Method: POST
+            RestApiId: !Ref Api
+            Auth:
+              Authorizer: JwtAuthorizer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref personajes
+        - Statement:
+            Effect: Allow
+            Action:
+              - xray:PutTraceSegments
+              - xray:PutTelemetryRecords
+            Resource: '*'
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - index.ts
+        External:
+          - '@aws-sdk/*'
+        Minify: false
+        Target: es2022
+        Format: cjs
+        Bundle: true
+        Platform: node
+
+  Fusionados:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: Fusionados
+      CodeUri: src/Lambdas/Fusionados
+      Handler: index.handler
+      Runtime: nodejs20.x
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
+      Environment:
+        Variables:
+          PERSONAJES_TABLE_NAME: !Ref personajes
+          PERSONAJES_TABLE_ARN: !GetAtt personajes.Arn
+          RANGOSEDAD_TABLE_NAME: !Ref rangosEdad
+          RANGOSEDAD_TABLE_ARN: !GetAtt rangosEdad.Arn
+          DATOSFUSIONADOS_TABLE_NAME: !Ref datosfusionados
+          DATOSFUSIONADOS_TABLE_ARN: !GetAtt datosfusionados.Arn
+          CACHE_TABLE_NAME: !Ref cacheTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /fusionados
+            Method: GET
+            RestApiId: !Ref Api
+            Auth:
+              Authorizer: JwtAuthorizer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref personajes
+        - DynamoDBCrudPolicy:
+            TableName: !Ref rangosEdad
+        - DynamoDBCrudPolicy:
+            TableName: !Ref datosfusionados
+        - DynamoDBCrudPolicy:
+            TableName: !Ref cacheTable
+        - Statement:
+            Effect: Allow
+            Action:
+              - xray:PutTraceSegments
+              - xray:PutTelemetryRecords
+            Resource: '*'
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - index.ts
+        External:
+          - '@aws-sdk/*'
+        Minify: false
+        Target: es2022
+        Format: cjs
+        Bundle: true
+        Platform: node
+
+  Historial:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: Historial
+      CodeUri: src/Lambdas/Historial
+      Handler: index.handler
+      Runtime: nodejs20.x
+      MemorySize: 512
+      Timeout: 30
+      Tracing: Active
+      Environment:
+        Variables:
+          DATOSFUSIONADOS_TABLE_NAME: !Ref datosfusionados
+          DATOSFUSIONADOS_TABLE_ARN: !GetAtt datosfusionados.Arn
+          CACHE_TABLE_NAME: !Ref cacheTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /historial
+            Method: GET
+            RestApiId: !Ref Api
+            Auth:
+              Authorizer: JwtAuthorizer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref datosfusionados
+        - DynamoDBCrudPolicy:
+            TableName: !Ref cacheTable
+        - Statement:
+            Effect: Allow
+            Action:
+              - xray:PutTraceSegments
+              - xray:PutTelemetryRecords
+            Resource: '*'
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - index.ts
+        External:
+          - '@aws-sdk/*'
+        Minify: false
+        Target: es2022
+        Format: cjs
+        Bundle: true
+        Platform: node
+
+  TestEndpoint:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Endpoint de prueba para verificar autorización
+      CodeUri: src/Lambdas/TestEndpoint
+      Handler: index.handler
+      Runtime: nodejs20.x
+      MemorySize: 128
+      Timeout: 10
+      Tracing: Active
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /test
+            Method: GET
+            RestApiId: !Ref Api
+            Auth:
+              Authorizer: JwtAuthorizer
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - index.ts
+        External:
+          - '@aws-sdk/*'
+        Minify: false
+        Target: es2022
+        Format: cjs
+        Bundle: true
+        Platform: node
+
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Lambda Authorizer para validar JWTs
+      CodeUri: src/Lambdas/Authorizer
+      Handler: index.handler
+      Runtime: nodejs20.x
+      MemorySize: 128
+      Timeout: 10
+      Tracing: Active
+      Environment:
+        Variables:
+          JWT_SECRET_API_GATEWAY: !Ref JwtSecretApiGateway
+          CACHE_TABLE_NAME: !Ref cacheTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref cacheTable
+        - Statement:
+            Effect: Allow
+            Action:
+              - xray:PutTraceSegments
+              - xray:PutTelemetryRecords
+            Resource: '*'
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - index.ts
+        External:
+          - '@aws-sdk/*'
+        Minify: false
+        Target: es2022
+        Format: cjs
+        Bundle: true
+        Platform: node
+
+  # --- Tablas DynamoDB y Log Groups ---
+  personajes:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: nombre
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: nombre
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: IdIndex
+          KeySchema:
+            - AttributeName: id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  rangosEdad:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  datosfusionados:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: nombre
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: NombreIndex
+          KeySchema:
+            - AttributeName: nombre
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  cacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: cacheKey
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: cacheKey
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  AlmacenarLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Almacenar}
+
+  FusionadosLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Fusionados}
+
+  HistorialLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Historial}

@@ -1,0 +1,17 @@
+{
+  "name": "authorizer-lambda",
+  "version": "1.0.0",
+  "description": "Lambda authorizer for JWT validation",
+  "main": "index.ts",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.0",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.0",
+    "@types/node": "^20.0.0",
+    "@types/jsonwebtoken": "^9.0.0",
+    "typescript": "^5.0.0"
+  }
+} 

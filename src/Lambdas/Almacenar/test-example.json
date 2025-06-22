@@ -1,0 +1,59 @@
+{
+  "ejemplos_validos": [
+    {
+      "nombre": "Gandalf",
+      "edad": 2019,
+      "atributo": "Magia"
+    },
+    {
+      "nombre": "Aragorn",
+      "edad": 87,
+      "atributo": "Espada"
+    },
+    {
+      "nombre": "Legolas",
+      "edad": 2931,
+      "atributo": "Arco"
+    }
+  ],
+  "ejemplos_invalidos": [
+    {
+      "descripcion": "Falta nombre",
+      "datos": {
+        "edad": 25,
+        "atributo": "Fuerza"
+      }
+    },
+    {
+      "descripcion": "Edad inválida (0)",
+      "datos": {
+        "nombre": "Frodo",
+        "edad": 0,
+        "atributo": "Anillo"
+      }
+    },
+    {
+      "descripcion": "Nombre muy largo",
+      "datos": {
+        "nombre": "EsteEsUnNombreMuyLargoQueExcedeLosCincuentaCaracteresPermitidos",
+        "edad": 30,
+        "atributo": "Valentía"
+      }
+    },
+    {
+      "descripcion": "Atributo vacío",
+      "datos": {
+        "nombre": "Sam",
+        "edad": 38,
+        "atributo": ""
+      }
+    }
+  ],
+  "evento_ejemplo": {
+    "httpMethod": "POST",
+    "body": "{\"nombre\":\"Gandalf\",\"edad\":2019,\"atributo\":\"Magia\"}",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+} 

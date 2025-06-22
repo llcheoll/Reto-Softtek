@@ -1,0 +1,43 @@
+{
+  "name": "api-personajes-swagger",
+  "version": "1.0.0",
+  "description": "Documentación Swagger y herramientas para la API de Personajes",
+  "main": "generate-jwt.js",
+  "scripts": {
+    "start": "node generate-jwt.js",
+    "generate": "node generate-jwt.js generate",
+    "custom": "node generate-jwt.js custom",
+    "verify": "node generate-jwt.js verify",
+    "help": "node generate-jwt.js help",
+    "swagger": "open swagger-ui.html",
+    "serve-swagger": "npx http-server . -p 8080 -o swagger-ui.html"
+  },
+  "keywords": [
+    "swagger",
+    "openapi",
+    "jwt",
+    "api",
+    "documentation",
+    "aws",
+    "lambda"
+  ],
+  "author": "Reto Técnico",
+  "license": "MIT",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/reto-tecnico.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tu-usuario/reto-tecnico/issues"
+  },
+  "homepage": "https://github.com/tu-usuario/reto-tecnico#readme"
+} 

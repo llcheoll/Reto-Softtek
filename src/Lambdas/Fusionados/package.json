@@ -1,0 +1,29 @@
+{
+  "name": "fusionados-lambda",
+  "version": "1.0.0",
+  "description": "Lambda para fusionar datos de personajes con rangos de edad",
+  "main": "index.mts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.0",
+    "@types/node": "^20.0.0",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "dynamodb",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC"
+}

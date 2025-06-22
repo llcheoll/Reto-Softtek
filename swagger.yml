@@ -1,0 +1,596 @@
+openapi: 3.0.3
+info:
+  title: API de Personajes - Reto Técnico
+  description: |
+    API para gestionar personajes con sistema de fusión y historial.
+    
+    ## Endpoints disponibles:
+    - **POST /almacenar**: Almacena un nuevo personaje
+    - **GET /fusionados**: Obtiene datos fusionados de personajes
+    - **GET /historial**: Obtiene el historial de fusiones
+    
+    ## Autenticación:
+    Todos los endpoints requieren autenticación JWT. Incluye el token en el header `Authorization: Bearer <token>`
+    
+    ## Ejemplo de token JWT válido:
+    ```
+    eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+    ```
+  version: 1.0.0
+  contact:
+    name: Soporte API
+    email: soporte@reto-tecnico.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://{api-id}.execute-api.{region}.amazonaws.com/Prod
+    description: Servidor de producción
+    variables:
+      api-id:
+        description: ID del API Gateway
+        default: "your-api-id"
+      region:
+        description: Región de AWS
+        default: "us-east-1"
+  - url: http://localhost:3000
+    description: Servidor local (para desarrollo)
+
+security:
+  - BearerAuth: []
+
+paths:
+  /almacenar:
+    post:
+      tags:
+        - Personajes
+      summary: Almacenar un nuevo personaje
+      description: |
+        Crea y almacena un nuevo personaje en la base de datos.
+        
+        **Validaciones:**
+        - El nombre debe tener entre 2 y 50 caracteres
+        - La edad debe estar entre 0 y 900 años
+        - El atributo debe ser uno de: "fuerza", "destreza", "inteligencia", "carisma", "constitución"
+      operationId: almacenarPersonaje
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonajeInput'
+            examples:
+              personaje_valido:
+                summary: Personaje válido
+                description: Ejemplo de un personaje con todos los campos requeridos
+                value:
+                  nombre: "Gandalf"
+                  edad: 2019
+                  atributo: "inteligencia"
+              personaje_con_id:
+                summary: Personaje con ID personalizado
+                description: Ejemplo de un personaje con ID específico
+                value:
+                  nombre: "Aragorn"
+                  edad: 87
+                  atributo: "destreza"
+                  id: "aragorn-001"
+      responses:
+        '200':
+          description: Personaje almacenado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePersonaje'
+              examples:
+                exito:
+                  summary: Respuesta exitosa
+                  value:
+                    success: true
+                    message: "Personaje almacenado exitosamente"
+                    data:
+                      id: "gandalf-001"
+                      nombre: "Gandalf"
+                      edad: 2019
+                      atributo: "inteligencia"
+                      createdAt: "2024-01-15T10:30:00Z"
+                      updatedAt: "2024-01-15T10:30:00Z"
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+              examples:
+                validacion_error:
+                  summary: Error de validación
+                  value:
+                    success: false
+                    message: "Datos de entrada inválidos"
+                    error: "VALIDATION_ERROR"
+                    details:
+                      - "El nombre debe tener entre 2 y 50 caracteres"
+                      - "La edad debe estar entre 0 y 900 años"
+        '401':
+          description: No autorizado - Token JWT inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+
+  /fusionados:
+    get:
+      tags:
+        - Datos Fusionados
+      summary: Obtener datos fusionados
+      description: |
+        Obtiene los datos fusionados de personajes con información de rangos de edad.
+        
+        **Parámetros de consulta:**
+        - `nombre` (opcional): Filtrar por nombre del personaje
+        - `limit` (opcional): Número máximo de resultados (default: 10, max: 100)
+        
+        **Sistema de caché:**
+        Los resultados se almacenan en caché para mejorar el rendimiento.
+      operationId: obtenerDatosFusionados
+      parameters:
+        - name: nombre
+          in: query
+          description: Filtrar por nombre del personaje
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 50
+          example: "Gandalf"
+        - name: limit
+          in: query
+          description: Número máximo de resultados
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 20
+      responses:
+        '200':
+          description: Datos fusionados obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseFusionados'
+              examples:
+                exito_con_datos:
+                  summary: Respuesta con datos
+                  value:
+                    success: true
+                    message: "Datos fusionados obtenidos exitosamente"
+                    data:
+                      id: "gandalf-001"
+                      nombre: "Gandalf"
+                      edad: 2019
+                      atributo: "inteligencia"
+                      nombre_rango: "Inmortal"
+                      fecha_fusion: "2024-01-15T10:30:00Z"
+                exito_sin_datos:
+                  summary: Respuesta sin datos
+                  value:
+                    success: true
+                    message: "No se encontraron datos fusionados"
+                    data: null
+        '401':
+          description: No autorizado - Token JWT inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+
+  /historial:
+    get:
+      tags:
+        - Historial
+      summary: Obtener historial de fusiones
+      description: |
+        Obtiene el historial paginado de todas las fusiones realizadas.
+        
+        **Parámetros de consulta:**
+        - `page` (opcional): Número de página (default: 1)
+        - `limit` (opcional): Elementos por página (default: 10, max: 100)
+        - `nombre` (opcional): Filtrar por nombre del personaje
+        
+        **Sistema de caché:**
+        Los resultados se almacenan en caché para mejorar el rendimiento.
+      operationId: obtenerHistorial
+      parameters:
+        - name: page
+          in: query
+          description: Número de página
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Elementos por página
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 20
+        - name: nombre
+          in: query
+          description: Filtrar por nombre del personaje
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 50
+          example: "Gandalf"
+      responses:
+        '200':
+          description: Historial obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseHistorial'
+              examples:
+                exito_con_paginacion:
+                  summary: Respuesta con paginación
+                  value:
+                    success: true
+                    message: "Historial obtenido exitosamente"
+                    data:
+                      datosFusionados:
+                        - id: "gandalf-001"
+                          nombre: "Gandalf"
+                          edad: 2019
+                          atributo: "inteligencia"
+                          nombre_rango: "Inmortal"
+                          fecha_fusion: "2024-01-15T10:30:00Z"
+                        - id: "aragorn-001"
+                          nombre: "Aragorn"
+                          edad: 87
+                          atributo: "destreza"
+                          nombre_rango: "Adulto"
+                          fecha_fusion: "2024-01-15T11:00:00Z"
+                      page: 1
+                      total: 2
+                      totalPages: 1
+                exito_sin_datos:
+                  summary: Respuesta sin datos
+                  value:
+                    success: true
+                    message: "No se encontraron registros en el historial"
+                    data:
+                      datosFusionados: []
+                      page: 1
+                      total: 0
+                      totalPages: 0
+        '401':
+          description: No autorizado - Token JWT inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+
+  /test:
+    get:
+      tags:
+        - Autenticación
+      summary: Endpoint de prueba
+      description: |
+        Endpoint de prueba para verificar que la autenticación JWT funciona correctamente.
+        Útil para probar tokens sin afectar datos reales.
+      operationId: testAuth
+      responses:
+        '200':
+          description: Autenticación exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Autenticación exitosa"
+                  user:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        example: "1234567890"
+                      iat:
+                        type: integer
+                        example: 1516239022
+        '401':
+          description: No autorizado - Token JWT inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT requerido para autenticación.
+        
+        **Formato:** `Bearer <token>`
+        
+        **Ejemplo de token válido:**
+        ```
+        eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+        ```
+
+  schemas:
+    PersonajeInput:
+      type: object
+      required:
+        - nombre
+        - edad
+        - atributo
+      properties:
+        nombre:
+          type: string
+          minLength: 2
+          maxLength: 50
+          description: Nombre del personaje
+          example: "Gandalf"
+        edad:
+          type: integer
+          minimum: 0
+          maximum: 900
+          description: Edad del personaje en años
+          example: 2019
+        atributo:
+          type: string
+          enum: ["fuerza", "destreza", "inteligencia", "carisma", "constitución"]
+          description: Atributo principal del personaje
+          example: "inteligencia"
+        id:
+          type: string
+          description: ID personalizado del personaje (opcional)
+          example: "gandalf-001"
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creación (opcional, se genera automáticamente)
+          example: "2024-01-15T10:30:00Z"
+
+    Personaje:
+      type: object
+      required:
+        - id
+        - nombre
+        - edad
+        - atributo
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: ID único del personaje
+          example: "gandalf-001"
+        nombre:
+          type: string
+          description: Nombre del personaje
+          example: "Gandalf"
+        edad:
+          type: integer
+          description: Edad del personaje en años
+          example: 2019
+        atributo:
+          type: string
+          description: Atributo principal del personaje
+          example: "inteligencia"
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creación
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de última actualización
+          example: "2024-01-15T10:30:00Z"
+
+    DatoFusionado:
+      type: object
+      required:
+        - id
+        - nombre
+        - edad
+        - atributo
+        - nombre_rango
+        - fecha_fusion
+      properties:
+        id:
+          type: string
+          description: ID único del personaje
+          example: "gandalf-001"
+        nombre:
+          type: string
+          description: Nombre del personaje
+          example: "Gandalf"
+        edad:
+          type: integer
+          description: Edad del personaje en años
+          example: 2019
+        atributo:
+          type: string
+          description: Atributo principal del personaje
+          example: "inteligencia"
+        nombre_rango:
+          type: string
+          description: Rango de edad asignado
+          example: "Inmortal"
+        fecha_fusion:
+          type: string
+          format: date-time
+          description: Fecha de fusión
+          example: "2024-01-15T10:30:00Z"
+
+    PaginatedData:
+      type: object
+      required:
+        - datosFusionados
+        - page
+        - total
+        - totalPages
+      properties:
+        datosFusionados:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatoFusionado'
+          description: Lista de datos fusionados
+        page:
+          type: integer
+          description: Página actual
+          example: 1
+        total:
+          type: integer
+          description: Total de registros
+          example: 25
+        totalPages:
+          type: integer
+          description: Total de páginas
+          example: 3
+
+    ApiResponsePersonaje:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Indica si la operación fue exitosa
+          example: true
+        message:
+          type: string
+          description: Mensaje descriptivo de la respuesta
+          example: "Personaje almacenado exitosamente"
+        data:
+          $ref: '#/components/schemas/Personaje'
+        error:
+          type: string
+          description: Código de error (solo si success es false)
+          example: "VALIDATION_ERROR"
+        details:
+          type: array
+          items:
+            type: string
+          description: Detalles adicionales del error
+          example: ["El nombre debe tener entre 2 y 50 caracteres"]
+
+    ApiResponseFusionados:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Indica si la operación fue exitosa
+          example: true
+        message:
+          type: string
+          description: Mensaje descriptivo de la respuesta
+          example: "Datos fusionados obtenidos exitosamente"
+        data:
+          $ref: '#/components/schemas/DatoFusionado'
+        error:
+          type: string
+          description: Código de error (solo si success es false)
+          example: "DATABASE_ERROR"
+        details:
+          type: array
+          items:
+            type: string
+          description: Detalles adicionales del error
+
+    ApiResponseHistorial:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Indica si la operación fue exitosa
+          example: true
+        message:
+          type: string
+          description: Mensaje descriptivo de la respuesta
+          example: "Historial obtenido exitosamente"
+        data:
+          $ref: '#/components/schemas/PaginatedData'
+        error:
+          type: string
+          description: Código de error (solo si success es false)
+          example: "DATABASE_ERROR"
+
+    ApiResponseError:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Indica si la operación fue exitosa
+          example: false
+        message:
+          type: string
+          description: Mensaje descriptivo del error
+          example: "Error de validación en los datos de entrada"
+        error:
+          type: string
+          description: Código de error
+          example: "VALIDATION_ERROR"
+        details:
+          type: array
+          items:
+            type: string
+          description: Detalles adicionales del error
+          example: ["El nombre debe tener entre 2 y 50 caracteres"]
+
+tags:
+  - name: Personajes
+    description: Operaciones relacionadas con el almacenamiento de personajes
+  - name: Datos Fusionados
+    description: Operaciones para obtener datos fusionados de personajes
+  - name: Historial
+    description: Operaciones para consultar el historial de fusiones
+  - name: Autenticación
+    description: Operaciones relacionadas con la autenticación JWT 
